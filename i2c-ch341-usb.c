@@ -128,8 +128,8 @@ struct ch341_pin_config ch341_board_config[CH341_GPIO_NUM_PINS] =
     {   16, CH341_PIN_MODE_OUT , "gpio1"    , 0 }, // used as output
     {   17, CH341_PIN_MODE_OUT , "gpio2"    , 0 }, // used as output
     {   18, CH341_PIN_MODE_OUT , "gpio3"    , 0 }, // used as output
-    {   19, CH341_PIN_MODE_IN  , "gpio4"    , 1 }, // used as input with hardware IRQ
-    {   20, CH341_PIN_MODE_IN  , "gpio5"    , 0 }, // used as input
+    {   19, CH341_PIN_MODE_OUT , "gpio4"    , 0 }, // used as output
+    {   20, CH341_PIN_MODE_OUT , "gpio5"    , 0 }, // used as ouput
     {   21, CH341_PIN_MODE_IN  , "gpio6"    , 0 }, // used as input
     {   22, CH341_PIN_MODE_IN  , "gpio7"    , 0 }  // used as input
 };
@@ -657,7 +657,7 @@ static int ch341_irq_probe (struct ch341_device* ch341_dev)
 
     for (i = 0; i < ch341_dev->irq_num; i++)
     {
-        ch341_dev->irq_descs[i]   = irq_to_desc(ch341_dev->irq_base + i);
+        ch341_dev->irq_descs[i]   = irq_data_to_desc( irq_get_irq_data(ch341_dev->irq_base + i) );
         ch341_dev->irq_enabled[i] = false;
 
         irq_set_chip          (ch341_dev->irq_base + i, &ch341_dev->irq);

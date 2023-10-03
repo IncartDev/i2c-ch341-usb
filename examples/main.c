@@ -20,12 +20,15 @@
 // #include <linux/i2c.h>
 #include <linux/i2c-dev.h>
 
-#define I2C_SLAVE_ADDR   0x50
+#define I2C_SLAVE_ADDR0   0x3c
+#define I2C_SLAVE_ADDR1   0x3d
+#define I2C_SLAVE_ADDR2   0x3e
+#define I2C_SLAVE_ADDR3   0x3f
 
 uint8_t i2c_id_cmd  [] = { 0x0f };  // get ID command 
 uint8_t i2c_rd_cmd  [] = { 0xa8 };  // read data command
 
-uint8_t fm24_write[] = {0x0, 0xf1, 0x0a};
+
 uint8_t fm24_write2[] = {0x0, 0xf0, 0x0b};
 uint8_t fm24_read[] = {0x0, 0xf1};
 
@@ -60,6 +63,16 @@ uint8_t i2c_rd_data [6];            // data are 6 bytes
 //     }
 // };
 
+void send_cmd(int fd, uint8_t cmd, uint8_t data)
+{
+    uint8_t fm24_write[] = {cmd, data};
+    if (write(fd, fm24_write, sizeof(fm24_write)) != sizeof(fm24_write))
+    {
+        perror("Could not write id command to i2c slave");
+        return;
+    }
+}
+
 int main(int argc, char *argv[]) 
 {
 	// if (argc != 2)
@@ -78,79 +91,77 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	if (ioctl(i2c_bus, I2C_SLAVE_FORCE, I2C_SLAVE_ADDR) < 0)
+    int  fd;
+
+    if ((fd = open("/sys/class/gpio/gpio5/value", O_RDWR)) == -1) 
+    {
+        perror("open");
+        return -1;
+    }
+
+    if (write(fd, "0", 1) == -1) 
+    {
+        perror ("write");
+        return -1;
+    }
+
+    sleep(1);
+
+    if (write(fd, "1", 1) == -1) 
+    {
+        perror ("write");
+        return -1;
+    }
+
+	if (ioctl(i2c_bus, I2C_SLAVE_FORCE, I2C_SLAVE_ADDR0) < 0)
 	{
 		perror("Could not set i2c slave addr");
 		return -1;
 	}
 
-	if (write(i2c_bus, fm24_write, sizeof(fm24_write)) != sizeof(fm24_write))
-	{
-		perror("Could not write id command to i2c slave");
-		return -1;
-	}
+    while (true)
+    {
+        uint8_t byte[] = {0x0};
+        uint8_t read_data[] = {0xff};
+        if (write(i2c_bus, byte, sizeof(byte)) != sizeof(byte))
+        {
+            perror("Could not write id command to i2c slave");
+            return -1;
+        }
+        if (read (i2c_bus, read_data, sizeof(read_data)) != sizeof(read_data))
+        {
+            perror("Could not write read id from i2c slave");
+            return -1;
+        }
+        sleep(1);
+    }
 
-	if (write(i2c_bus, fm24_read, sizeof(fm24_read)) != sizeof(fm24_read))
-	{
-		perror("Could not write id command to i2c slave");
-		return -1;
-	}
+    // printf("Done: %x\n", read_data[0]);
 
-	if (read (i2c_bus, i2c_id_data, sizeof(i2c_id_data)) != sizeof(i2c_id_data))
-	{
-		perror("Could not write read id from i2c slave");
-		return -1;
-	}
-	printf("Done: %x\n", i2c_id_data[0]);
+    send_cmd(i2c_bus, 0x00, 0x21);
+    send_cmd(i2c_bus, 0x00, 0x16);
+    send_cmd(i2c_bus, 0x00, 0x0c);
+    send_cmd(i2c_bus, 0x00, 0x81);
+    send_cmd(i2c_bus, 0x00, 0x20);
+    send_cmd(i2c_bus, 0x00, 0x04);
+    send_cmd(i2c_bus, 0x00, 0x09);
 
-	// while (1)
+    send_cmd(i2c_bus, 0x40, 0xff);
+    send_cmd(i2c_bus, 0x40, 0xff);
+    send_cmd(i2c_bus, 0x40, 0xff);
+
+	// if (write(i2c_bus, fm24_read, sizeof(fm24_read)) != sizeof(fm24_read))
 	// {
-	// 	for (int i = 0; i < 32; i++)
-	// 		if (write(i2c_bus, i2c_id_cmd, sizeof(i2c_id_cmd)) != sizeof(i2c_id_cmd))
-	// 		{
-	// 			perror("Could not write id command to i2c slave");
-	// 			return -1;
-	// 		}
-	// 	for (int i = 0; i < 32; i++)
-	// 		if (read (i2c_bus, i2c_id_data, sizeof(i2c_id_data)) != sizeof(i2c_id_data))
-	// 		{
-	// 			perror("Could not write read id from i2c slave");
-	// 			return -1;
-	// 		}
-	// 	printf("Done: %x\n", i2c_id_data[0]);
-	// 	sleep(1);
-	// }
-
-	// if (read (i2c_bus, i2c_id_data, sizeof(i2c_id_data)) != sizeof(i2c_id_data))
-	// {
-	// 	perror("Could not write read id from i2c slave");
+	// 	perror("Could not write id command to i2c slave");
 	// 	return -1;
 	// }
 
-	// if (write(i2c_bus, i2c_rd_cmd, sizeof(i2c_rd_cmd)) != sizeof(i2c_rd_cmd))
-	// {
-	// 	perror("Could not write read data command to i2c slave");
-	// 	return -1;
-	// }
-
-	// if (read (i2c_bus, i2c_rd_data, sizeof(i2c_rd_data)) != sizeof(i2c_rd_data))
-	// {
-	// 	perror("Could not write read data from i2c slave");
-	// 	return -1;
-	// }
-
-    // int count = 0;
-    
-	// while (1) 
-	// {
-	// 	if (write(fd, count % 2 ? "1" : "0", 1) == -1) 
-	// 	{
-	// 		perror("write");
-	// 		return -1;
-	// 	}
-	// 	count++;
-	// 	sleep(1);
-	// }
-
+    //while (true)
+    {
+        // send_cmd(i2c_bus, 0x0, 0x21);
+        
+        sleep(1);
+    }
+	// printf("Done: %x %x\n", read_data[0], read_data[1]);
 	return 0;
 }
